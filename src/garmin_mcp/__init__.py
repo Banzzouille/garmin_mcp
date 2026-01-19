@@ -178,21 +178,73 @@ def main():
             return f"Error retrieving activities: {str(e)}"
 
     # Run the MCP server
-    # Check transport mode from environment or command-line arguments
-    transport = os.getenv("GARMIN_MCP_TRANSPORT", "stdio")
-    print(f"Transport mode: {transport}", file=sys.stderr)
-    print(f"Command line args: {sys.argv}", file=sys.stderr)
-    
-    if transport == "streamable-http" or transport == "http":
-        # Force HTTP mode with environment variables
-        host = os.getenv("GARMIN_MCP_HOST", "0.0.0.0")
-        port = int(os.getenv("GARMIN_MCP_PORT", "8000"))
-        print(f"Starting HTTP server on {host}:{port}", file=sys.stderr)
-        # Run with explicit transport parameters
-        app.run(transport="streamable-http", host=host, port=port)
-    else:
-        # Run in stdio mode (default)
+    transport = os.environ.get("GARMIN_MCP_TRANSPORT", "stdio")
+    host = os.environ.get("GARMIN_MCP_HOST", "0.0.0.0")
+    port_str = os.environ.get("GARMIN_MCP_PORT", "8000")
+    try:
+        port = int(port_str)
+    except ValueError:
+        port = 8000
+
+    if transport == "stdio":
         app.run()
+    else:
+        print(f"Starting MCP with transport={transport}, host={host}, port={port}", file=sys.stderr)
+        
+        # Aggressively monkey-patch uvicorn to force 0.0.0.0 binding
+        # FastMCP/uvicorn tends to default to 127.0.0.1 even when we specify 0.0.0.0
+        if host == "0.0.0.0":
+            try:
+                import uvicorn
+                import uvicorn.config
+                import uvicorn.server
+                
+                # Patch uvicorn.run
+                original_run = uvicorn.run
+                def patched_run(app, *args, **kwargs):
+                    if "host" not in kwargs or kwargs.get("host") == "127.0.0.1":
+                        kwargs["host"] = "0.0.0.0"
+                    if "port" not in kwargs and port:
+                        kwargs["port"] = port
+                    return original_run(app, *args, **kwargs)
+                uvicorn.run = patched_run
+                
+                # Patch Config.__init__ to force host
+                original_config_init = uvicorn.config.Config.__init__
+                def patched_config_init(self, *args, **kwargs):
+                    if "host" not in kwargs or kwargs.get("host") == "127.0.0.1" or kwargs.get("host") is None:
+                        kwargs["host"] = "0.0.0.0"
+                    if "port" not in kwargs and port:
+                        kwargs["port"] = port
+                    return original_config_init(self, *args, **kwargs)
+                uvicorn.config.Config.__init__ = patched_config_init
+                
+                # Patch Server.__init__ to force host
+                original_server_init = uvicorn.server.Server.__init__
+                def patched_server_init(self, config, *args, **kwargs):
+                    if hasattr(config, 'host') and (config.host == "127.0.0.1" or config.host is None):
+                        config.host = "0.0.0.0"
+                    if hasattr(config, 'port') and not config.port and port:
+                        config.port = port
+                    return original_server_init(self, config, *args, **kwargs)
+                uvicorn.server.Server.__init__ = patched_server_init
+                
+                print("Patched uvicorn to force 0.0.0.0 binding", file=sys.stderr)
+            except Exception as e:
+                print(f"Warning: Could not patch uvicorn: {e}", file=sys.stderr)
+        
+        # Try multiple FastMCP API signatures (API may vary)
+        try:
+            app.run(transport=transport, host=host, port=port)
+        except TypeError:
+            try:
+                app.run(transport=transport, hostname=host, port=port)
+            except TypeError:
+                try:
+                    app.run(transport=transport, address=host, port=port)
+                except TypeError:
+                    # Final fallback - the monkey-patch should catch this
+                    app.run(transport=transport)
 
 
 if __name__ == "__main__":
