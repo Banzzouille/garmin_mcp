@@ -28,14 +28,12 @@ except Exception as e:
 try:
     import mcp.server.streamable_http
     
-    # Patch _validate_accept_header to always return True
-    original_validate = mcp.server.streamable_http.StreamableHTTPServerTransport._validate_accept_header
+    # Patch _check_accept_headers to always return (True, True)
+    # Returns (has_json, has_sse) - we say yes to both
+    def patched_check_accept_headers(self, request):
+        return (True, True)  # Always accept any Accept header
     
-    async def patched_validate_accept_header(self, request, scope, send):
-        # Always accept, don't validate Accept headers
-        return True
-    
-    mcp.server.streamable_http.StreamableHTTPServerTransport._validate_accept_header = patched_validate_accept_header
+    mcp.server.streamable_http.StreamableHTTPServerTransport._check_accept_headers = patched_check_accept_headers
     print("EARLY PATCH: Disabled Accept header validation for client compatibility", file=sys.stderr)
 except Exception as e:
     print(f"EARLY PATCH WARNING: Could not patch Accept header validation: {e}", file=sys.stderr)
