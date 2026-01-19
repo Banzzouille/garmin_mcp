@@ -191,6 +191,20 @@ def main():
     else:
         print(f"Starting MCP with transport={transport}, host={host}, port={port}", file=sys.stderr)
         
+        # Disable host header validation for reverse proxy compatibility
+        # Starlette validates the Host header and rejects proxied requests by default
+        try:
+            import starlette.middleware.trustedhost
+            # Monkey-patch TrustedHostMiddleware to accept all hosts
+            original_init = starlette.middleware.trustedhost.TrustedHostMiddleware.__init__
+            def patched_trusted_host_init(self, app, allowed_hosts=None, **kwargs):
+                # Force allowed_hosts to ["*"] to accept all hosts
+                return original_init(self, app, allowed_hosts=["*"], **kwargs)
+            starlette.middleware.trustedhost.TrustedHostMiddleware.__init__ = patched_trusted_host_init
+            print("Disabled host header validation for reverse proxy compatibility", file=sys.stderr)
+        except Exception as e:
+            print(f"Warning: Could not patch TrustedHostMiddleware: {e}", file=sys.stderr)
+        
         # Aggressively monkey-patch uvicorn to force 0.0.0.0 binding
         # FastMCP/uvicorn tends to default to 127.0.0.1 even when we specify 0.0.0.0
         if host == "0.0.0.0":
