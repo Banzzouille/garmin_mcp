@@ -5,26 +5,23 @@ Modular MCP Server for Garmin Connect Data
 import os
 import sys
 
-# CRITICAL: Patch Starlette BEFORE importing FastMCP or any Starlette components
-# This MUST be the first thing we do after basic imports
+# CRITICAL: Disable MCP DNS rebinding protection for reverse proxy compatibility
+# This MUST be done before importing FastMCP or MCP components
 try:
-    import starlette.middleware.trustedhost
+    import mcp.server.transport_security
     
-    # Create a dummy middleware that accepts all hosts
-    class DummyTrustedHostMiddleware:
-        def __init__(self, app, allowed_hosts=None, **kwargs):
-            # Just pass through, don't validate anything
-            self.app = app
-        
-        async def __call__(self, scope, receive, send):
-            # Simply forward to the wrapped app without validation
-            return await self.app(scope, receive, send)
+    # Patch TransportSecuritySettings to disable DNS rebinding protection by default
+    original_settings_init = mcp.server.transport_security.TransportSecuritySettings.__init__
     
-    # Replace the entire TrustedHostMiddleware class BEFORE FastMCP import
-    starlette.middleware.trustedhost.TrustedHostMiddleware = DummyTrustedHostMiddleware
-    print("EARLY PATCH: Replaced TrustedHostMiddleware with dummy passthrough", file=sys.stderr)
+    def patched_settings_init(self, **kwargs):
+        # Force disable DNS rebinding protection
+        kwargs['enable_dns_rebinding_protection'] = False
+        return original_settings_init(self, **kwargs)
+    
+    mcp.server.transport_security.TransportSecuritySettings.__init__ = patched_settings_init
+    print("EARLY PATCH: Disabled MCP DNS rebinding protection for reverse proxy", file=sys.stderr)
 except Exception as e:
-    print(f"EARLY PATCH WARNING: Could not patch TrustedHostMiddleware: {e}", file=sys.stderr)
+    print(f"EARLY PATCH WARNING: Could not patch MCP transport security: {e}", file=sys.stderr)
 
 import requests
 from mcp.server.fastmcp import FastMCP
