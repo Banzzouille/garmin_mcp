@@ -188,16 +188,11 @@ def main():
         host = os.getenv("GARMIN_MCP_HOST", "0.0.0.0")
         port = int(os.getenv("GARMIN_MCP_PORT", "8000"))
         print(f"Starting HTTP server on {host}:{port}", file=sys.stderr)
-        # Add arguments to sys.argv for FastMCP to parse
-        if "--transport" not in sys.argv:
-            sys.argv.extend(["--transport", "streamable-http"])
-        if "--host" not in sys.argv:
-            sys.argv.extend(["--host", host])
-        if "--port" not in sys.argv:
-            sys.argv.extend(["--port", str(port)])
-    
-    print(f"Final sys.argv: {sys.argv}", file=sys.stderr)
-    app.run()
+        # Run with explicit transport parameters
+        app.run(transport="streamable-http", host=host, port=port)
+    else:
+        # Run in stdio mode (default)
+        app.run()
 
 
 if __name__ == "__main__":
