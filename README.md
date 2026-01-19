@@ -2,9 +2,58 @@
 
 # Garmin MCP Server
 
-This Model Context Protocol (MCP) server connects to Garmin Connect and exposes your fitness and health data to Claude and other MCP-compatible clients.
+This Model Context Protocol (MCP) server connects to Garmin Connect and exposes your fitness and health data to Claude, Mistral AI, and other MCP-compatible clients via HTTP.
 
-Garmin's API is accessed via the awesome [python-garminconnect](https://github.com/cyberjunky/python-garminconnect) library.
+Garmin's API is accessed via the awesome [python-garminconnect](https://github.com/cyberjunky/python-garminconnect) library by [@cyberjunky](https://github.com/cyberjunky).
+
+## 🐳 Quick Start with Docker Hub
+
+The easiest way to get started is using our pre-built Docker image:
+
+```bash
+docker run -d \
+  --name garmin-mcp-server \
+  -p 8000:8000 \
+  -e GARMIN_EMAIL="your_email@example.com" \
+  -e GARMIN_PASSWORD="your_password" \
+  -e GARMIN_MCP_TRANSPORT="streamable-http" \
+  -e GARMIN_MCP_HOST="0.0.0.0" \
+  -e GARMIN_MCP_PORT="8000" \
+  -v garmin-tokens:/root/.garminconnect \
+  banzzouille/garmin-mcp-server:latest
+```
+
+The server will be available at `http://localhost:8000/mcp`
+
+### Using with Mistral AI
+
+This server is compatible with Mistral AI's MCP connector feature:
+
+1. In Mistral AI, create a new MCP connector
+2. Set the server URL: `https://your-domain.com/mcp` (or `http://localhost:8000/mcp` for local testing)
+3. Configure authentication:
+   - **Method**: API Token Authentication
+   - **Header name**: `Authorization`
+   - **Header type**: `Basic`
+   - **Header value**: Base64 encoding of `username:password` (e.g., `dXNlcjpwYXNz` for `user:pass`)
+
+**Note**: If you're using Nginx Proxy Manager or similar reverse proxy with Basic Auth, Mistral AI will automatically discover OAuth endpoints. Ensure your reverse proxy configuration includes:
+
+```nginx
+location = /.well-known/oauth-protected-resource {
+    auth_basic off;
+    default_type application/json;
+    return 200 '{"resource":"https://your-domain.com/mcp","authorization_servers":[],"bearer_methods_supported":["header"]}';
+}
+
+location = /.well-known/oauth-protected-resource/mcp {
+    auth_basic off;
+    default_type application/json;
+    return 200 '{"resource":"https://your-domain.com/mcp","authorization_servers":[],"bearer_methods_supported":["header"]}';
+}
+```
+
+This prevents Mistral from attempting a full OAuth2 flow while still supporting Basic Auth for actual API calls.
 
 ## Features
 
@@ -298,3 +347,22 @@ uv run pytest tests/e2e/ -m e2e -v
 
 - **Integration tests** (96 tests): Test all MCP tools using FastMCP integration with mocked Garmin API responses
 - **End-to-end tests** (4 tests): Test with real MCP server and Garmin API (requires valid credentials)
+
+## 🙏 Acknowledgments
+
+This project builds upon the excellent work of the open-source community:
+
+- **[python-garminconnect](https://github.com/cyberjunky/python-garminconnect)** by [@cyberjunky](https://github.com/cyberjunky) - The Python library that makes the connection to Garmin Connect possible. This project wouldn't exist without this fantastic library that provides a clean and reliable interface to Garmin's API.
+
+- **[Taxuspt/garmin_mcp](https://github.com/Taxuspt/garmin_mcp)** - The original MCP server implementation that inspired this fork.
+
+### Why This Fork?
+
+This fork extends the original project with:
+
+- **HTTP/SSE Transport Support**: Added `streamable-http` transport for compatibility with web-based MCP clients like Mistral AI
+- **Reverse Proxy Compatibility**: Patched DNS rebinding protection and Accept header validation for seamless integration behind Nginx Proxy Manager and other reverse proxies
+- **Docker Hub Distribution**: Pre-built Docker images available at `banzzouille/garmin-mcp-server` for easy deployment
+- **Enhanced Documentation**: Comprehensive guides for Mistral AI integration, OAuth discovery endpoints, and production deployment scenarios
+
+Special thanks to the Garmin Connect community and everyone who contributes to making fitness data more accessible! 💪

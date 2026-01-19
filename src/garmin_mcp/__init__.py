@@ -24,7 +24,8 @@ except Exception as e:
     print(f"EARLY PATCH WARNING: Could not patch MCP transport security: {e}", file=sys.stderr)
 
 # CRITICAL: Patch MCP streamable_http to accept any Accept header
-# Mistral and other clients may not send the exact headers MCP expects
+# Mistral AI and other HTTP clients may not send the exact headers MCP expects
+# This patch ensures compatibility with various MCP clients
 try:
     import mcp.server.streamable_http
     

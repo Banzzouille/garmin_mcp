@@ -11,17 +11,23 @@ on:
 jobs:
   build_docker_image:
     runs-on: ubuntu-latest
-    name: A job to build the backend Image container
+    name: Build and publish Docker images
     steps:  
     - name: Checkout code
       uses: actions/checkout@v3
    
-    - name: Login to Github Packages
+    - name: Login to GitHub Container Registry
       uses: docker/login-action@v3.0.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GHCR_PAT }}
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3.0.0
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
@@ -29,17 +35,15 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
         
-    - name: Build image and push LATEST to GitHub Container Registry AMD64
+    - name: Build and push to GitHub Container Registry and Docker Hub
       uses: docker/build-push-action@v6
       with:
-          # relative path to the place where source code with Dockerfile is located    
           file: Dockerfile
           context: .
-          platforms: linux/amd64
-          # Note: tags has to be all lower-case
+          platforms: linux/amd64,linux/arm64
           tags: | 
-            ghcr.io/banzzouille/garmin-mcp-server
-          # build on feature branches, push only on main branch
+            ghcr.io/banzzouille/garmin-mcp-server:latest
+            banzzouille/garmin-mcp-server:latest
           push: ${{ github.ref == 'refs/heads/main' }}       
 
     - name: Clean up dangling images
