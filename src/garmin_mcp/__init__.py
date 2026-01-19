@@ -5,6 +5,27 @@ Modular MCP Server for Garmin Connect Data
 import os
 import sys
 
+# CRITICAL: Patch Starlette BEFORE importing FastMCP or any Starlette components
+# This MUST be the first thing we do after basic imports
+try:
+    import starlette.middleware.trustedhost
+    
+    # Create a dummy middleware that accepts all hosts
+    class DummyTrustedHostMiddleware:
+        def __init__(self, app, allowed_hosts=None, **kwargs):
+            # Just pass through, don't validate anything
+            self.app = app
+        
+        async def __call__(self, scope, receive, send):
+            # Simply forward to the wrapped app without validation
+            return await self.app(scope, receive, send)
+    
+    # Replace the entire TrustedHostMiddleware class BEFORE FastMCP import
+    starlette.middleware.trustedhost.TrustedHostMiddleware = DummyTrustedHostMiddleware
+    print("EARLY PATCH: Replaced TrustedHostMiddleware with dummy passthrough", file=sys.stderr)
+except Exception as e:
+    print(f"EARLY PATCH WARNING: Could not patch TrustedHostMiddleware: {e}", file=sys.stderr)
+
 import requests
 from mcp.server.fastmcp import FastMCP
 
@@ -114,27 +135,6 @@ def init_api(email, password):
 
 def main():
     """Initialize the MCP server and register all tools"""
-    
-    # CRITICAL: Patch Starlette TrustedHostMiddleware BEFORE creating FastMCP app
-    # This must happen before any FastMCP/Starlette initialization
-    try:
-        import starlette.middleware.trustedhost
-        
-        # Create a dummy middleware that accepts all hosts
-        class DummyTrustedHostMiddleware:
-            def __init__(self, app, allowed_hosts=None, **kwargs):
-                # Just pass through, don't validate anything
-                self.app = app
-            
-            async def __call__(self, scope, receive, send):
-                # Simply forward to the wrapped app without validation
-                return await self.app(scope, receive, send)
-        
-        # Replace the entire TrustedHostMiddleware class
-        starlette.middleware.trustedhost.TrustedHostMiddleware = DummyTrustedHostMiddleware
-        print("Replaced TrustedHostMiddleware with dummy passthrough", file=sys.stderr)
-    except Exception as e:
-        print(f"Warning: Could not patch TrustedHostMiddleware: {e}", file=sys.stderr)
 
     # Initialize Garmin client
     garmin_client = init_api(email, password)
