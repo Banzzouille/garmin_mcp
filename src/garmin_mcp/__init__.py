@@ -119,13 +119,20 @@ def main():
     # This must happen before any FastMCP/Starlette initialization
     try:
         import starlette.middleware.trustedhost
-        # Monkey-patch TrustedHostMiddleware to accept all hosts
-        original_init = starlette.middleware.trustedhost.TrustedHostMiddleware.__init__
-        def patched_trusted_host_init(self, app, allowed_hosts=None, **kwargs):
-            # Force allowed_hosts to ["*"] to accept all hosts
-            return original_init(self, app, allowed_hosts=["*"], **kwargs)
-        starlette.middleware.trustedhost.TrustedHostMiddleware.__init__ = patched_trusted_host_init
-        print("Patched TrustedHostMiddleware BEFORE FastMCP initialization", file=sys.stderr)
+        
+        # Create a dummy middleware that accepts all hosts
+        class DummyTrustedHostMiddleware:
+            def __init__(self, app, allowed_hosts=None, **kwargs):
+                # Just pass through, don't validate anything
+                self.app = app
+            
+            async def __call__(self, scope, receive, send):
+                # Simply forward to the wrapped app without validation
+                return await self.app(scope, receive, send)
+        
+        # Replace the entire TrustedHostMiddleware class
+        starlette.middleware.trustedhost.TrustedHostMiddleware = DummyTrustedHostMiddleware
+        print("Replaced TrustedHostMiddleware with dummy passthrough", file=sys.stderr)
     except Exception as e:
         print(f"Warning: Could not patch TrustedHostMiddleware: {e}", file=sys.stderr)
 
