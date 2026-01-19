@@ -11,16 +11,19 @@ services:
       - GARMIN_PASSWORD=${GARMIN_PASSWORD}
       # Control transport/mapping from .env or env vars (defaults shown)
       - GARMIN_MCP_TRANSPORT=${GARMIN_MCP_TRANSPORT:-stdio}
-      - GARMIN_MCP_HOST=${GARMIN_MCP_HOST:-127.0.0.1}
+      # bind inside container to all interfaces so published port can reach it
+      - GARMIN_MCP_HOST=${GARMIN_MCP_HOST:-0.0.0.0}
       - GARMIN_MCP_PORT=${GARMIN_MCP_PORT:-8000}
       - GARMIN_USE_UV=${GARMIN_USE_UV:-false}
       # Optional override to run a custom command (entrypoint.sh will execute it)
       # - GARMIN_RUN_CMD=${GARMIN_RUN_CMD}
+      - GARMIN_MCP_BIND=${GARMIN_MCP_BIND:-127.0.0.1}
+      # host side port (default changed to 9000)
+      - GARMIN_HOST_PORT=${GARMIN_HOST_PORT:-9000}
 
-    # Map port only if you want the container reachable from host (e.g. streamable-http)
-    # Uncomment to enable host<->container port mapping
+    # publish host port 9000 -> container port 8000
     ports:
-      - "${GARMIN_MCP_PORT:-8000}:${GARMIN_MCP_PORT:-8000}"
+      - "${GARMIN_MCP_BIND:-127.0.0.1}:${GARMIN_HOST_PORT:-9000}:${GARMIN_MCP_PORT:-8000}"
 
     # Mount volume to persist Garmin OAuth tokens
     volumes:
