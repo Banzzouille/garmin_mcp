@@ -9,14 +9,18 @@ services:
     environment:
       - GARMIN_EMAIL=${GARMIN_EMAIL}
       - GARMIN_PASSWORD=${GARMIN_PASSWORD}
+      # Control transport/mapping from .env or env vars (defaults shown)
+      - GARMIN_MCP_TRANSPORT=${GARMIN_MCP_TRANSPORT:-stdio}
+      - GARMIN_MCP_HOST=${GARMIN_MCP_HOST:-127.0.0.1}
+      - GARMIN_MCP_PORT=${GARMIN_MCP_PORT:-8000}
+      - GARMIN_USE_UV=${GARMIN_USE_UV:-false}
+      # Optional override to run a custom command (entrypoint.sh will execute it)
+      # - GARMIN_RUN_CMD=${GARMIN_RUN_CMD}
 
-    # Option 2: Use file-based secrets (uncomment to use)
-    # environment:
-    #   - GARMIN_EMAIL_FILE=/run/secrets/garmin_email
-    #   - GARMIN_PASSWORD_FILE=/run/secrets/garmin_password
-    # secrets:
-    #   - garmin_email
-    #   - garmin_password
+    # Map port only if you want the container reachable from host (e.g. streamable-http)
+    # Uncomment to enable host<->container port mapping
+    ports:
+      - "${GARMIN_MCP_PORT:-8000}:${GARMIN_MCP_PORT:-8000}"
 
     # Mount volume to persist Garmin OAuth tokens
     volumes:

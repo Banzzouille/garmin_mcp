@@ -32,12 +32,22 @@ COPY pytest.ini ./
 RUN mkdir -p /root/.garminconnect && \
     chmod 700 /root/.garminconnect
 
+# Add transport/port/host env vars (default to stdio and 8000)
+ENV GARMIN_MCP_TRANSPORT=stdio \
+    GARMIN_MCP_PORT=8000 \
+    GARMIN_MCP_HOST=127.0.0.1 \
+    GARMIN_USE_UV=false
+
+# Copy entrypoint script and make it executable
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Expose the application (if needed for network communication)
 # Note: MCP servers typically communicate via stdio, so no port exposure is usually needed
 EXPOSE 8000
 
-# Set the entrypoint to run the MCP server
-ENTRYPOINT ["garmin-mcp"]
+# Set the entrypoint to run the MCP server via wrapper (handles GARMIN_MCP_TRANSPORT)
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Health check (optional - adjust based on your needs)
 # HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
