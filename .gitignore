@@ -43,3 +43,4 @@ Thumbs.db
 # Secrets
 *.secret
 secrets/
+garmin_mcp-main/
