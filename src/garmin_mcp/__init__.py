@@ -23,6 +23,23 @@ try:
 except Exception as e:
     print(f"EARLY PATCH WARNING: Could not patch MCP transport security: {e}", file=sys.stderr)
 
+# CRITICAL: Patch MCP streamable_http to accept any Accept header
+# Mistral and other clients may not send the exact headers MCP expects
+try:
+    import mcp.server.streamable_http
+    
+    # Patch _validate_accept_header to always return True
+    original_validate = mcp.server.streamable_http.StreamableHTTPServerTransport._validate_accept_header
+    
+    async def patched_validate_accept_header(self, request, scope, send):
+        # Always accept, don't validate Accept headers
+        return True
+    
+    mcp.server.streamable_http.StreamableHTTPServerTransport._validate_accept_header = patched_validate_accept_header
+    print("EARLY PATCH: Disabled Accept header validation for client compatibility", file=sys.stderr)
+except Exception as e:
+    print(f"EARLY PATCH WARNING: Could not patch Accept header validation: {e}", file=sys.stderr)
+
 import requests
 from mcp.server.fastmcp import FastMCP
 
