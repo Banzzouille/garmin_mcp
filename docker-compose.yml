@@ -3,7 +3,7 @@ services:
     networks:
       - backend_net
     container_name: garmin-mcp-server
-    image: "banzzouille/garmin-mcp-server:latest"
+    image: "ghcr.io/banzzouille/garmin-mcp-server:latest"
 
     # Option 1: Use environment variables directly
     environment:
