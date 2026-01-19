@@ -32,7 +32,20 @@ def register_tools(app):
                 return f"No activities found between {start_date} and {end_date}" + \
                        (f" for activity type '{activity_type}'" if activity_type else "")
             
-            return activities
+            # Format activities as readable string
+            result = f"Activities from {start_date} to {end_date}"
+            if activity_type:
+                result += f" (type: {activity_type})"
+            result += f":\n\n"
+            
+            for idx, activity in enumerate(activities, 1):
+                result += f"--- Activity {idx} ---\n"
+                result += f"Activity: {activity.get('activityName', 'Unknown')}\n"
+                result += f"Type: {activity.get('activityType', {}).get('typeKey', 'Unknown')}\n"
+                result += f"Date: {activity.get('startTimeLocal', 'Unknown')}\n"
+                result += f"ID: {activity.get('activityId', 'Unknown')}\n\n"
+            
+            return result
         except Exception as e:
             return f"Error retrieving activities by date: {str(e)}"
 
