@@ -122,6 +122,7 @@ def main():
         return
 
     print("Garmin Connect client initialized successfully.", file=sys.stderr)
+    print(f"Starting MCP server with args: {sys.argv}", file=sys.stderr)
 
     # Configure all modules with the Garmin client
     activity_management.configure(garmin_client)
@@ -177,6 +178,25 @@ def main():
             return f"Error retrieving activities: {str(e)}"
 
     # Run the MCP server
+    # Check transport mode from environment or command-line arguments
+    transport = os.getenv("GARMIN_MCP_TRANSPORT", "stdio")
+    print(f"Transport mode: {transport}", file=sys.stderr)
+    print(f"Command line args: {sys.argv}", file=sys.stderr)
+    
+    if transport == "streamable-http" or transport == "http":
+        # Force HTTP mode with environment variables
+        host = os.getenv("GARMIN_MCP_HOST", "0.0.0.0")
+        port = int(os.getenv("GARMIN_MCP_PORT", "8000"))
+        print(f"Starting HTTP server on {host}:{port}", file=sys.stderr)
+        # Add arguments to sys.argv for FastMCP to parse
+        if "--transport" not in sys.argv:
+            sys.argv.extend(["--transport", "streamable-http"])
+        if "--host" not in sys.argv:
+            sys.argv.extend(["--host", host])
+        if "--port" not in sys.argv:
+            sys.argv.extend(["--port", str(port)])
+    
+    print(f"Final sys.argv: {sys.argv}", file=sys.stderr)
     app.run()
 
 
