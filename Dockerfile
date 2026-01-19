@@ -34,7 +34,7 @@ RUN mkdir -p /root/.garminconnect && \
 
 # Expose the application (if needed for network communication)
 # Note: MCP servers typically communicate via stdio, so no port exposure is usually needed
-# EXPOSE 8000
+EXPOSE 8000
 
 # Set the entrypoint to run the MCP server
 ENTRYPOINT ["garmin-mcp"]
