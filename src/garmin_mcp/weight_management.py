@@ -1,6 +1,7 @@
 """
 Weight management functions for Garmin Connect MCP Server
 """
+import json
 import datetime
 from typing import Any, Dict, List, Optional, Union
 
@@ -29,7 +30,7 @@ def register_tools(app):
             weigh_ins = garmin_client.get_weigh_ins(start_date, end_date)
             if not weigh_ins:
                 return f"No weight measurements found between {start_date} and {end_date}."
-            return weigh_ins
+            return json.dumps(weigh_ins, indent=2)
         except Exception as e:
             return f"Error retrieving weight measurements: {str(e)}"
 
@@ -44,7 +45,7 @@ def register_tools(app):
             weigh_ins = garmin_client.get_daily_weigh_ins(date)
             if not weigh_ins:
                 return f"No weight measurements found for {date}."
-            return weigh_ins
+            return json.dumps(weigh_ins, indent=2)
         except Exception as e:
             return f"Error retrieving daily weight measurements: {str(e)}"
     

@@ -1,6 +1,7 @@
 """
 Data management functions for Garmin Connect MCP Server
 """
+import json
 import datetime
 from typing import Any, Dict, List, Optional, Union
 
